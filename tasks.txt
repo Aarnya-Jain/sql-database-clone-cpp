@@ -1,0 +1,4 @@
+1. create table , add col , add row functions to be added {insert,add}
+2. delete functions to be added {drop , delete}
+5. update functionality {update}
+
