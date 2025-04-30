@@ -8,6 +8,3 @@ Adding support for CREATE TABLE, DROP TABLE, and column definitions
 Persistent storage (save to file + load on startup)
 
 Expression evaluation in WHERE
-
-Support for AND, OR, LIKE, etc.
-Indexing (B+ Trees or Hashtables)

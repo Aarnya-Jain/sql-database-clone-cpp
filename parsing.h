@@ -35,6 +35,7 @@ enum QueryType {
     CREATE,
     DROP,
     OPEN,
+    ADD
 };
 
 /// THE SORT ONE IS OF THE LEAST PRIORITY
@@ -58,8 +59,10 @@ struct DropQuery{
 
 struct DeleteQuery{
     string table;
-    vector<string> rows;
-    vector<string> cols;
+    string col;
+    string where_col;
+    string where_value;
+    string where_operator;
 };
 
 struct InsertQuery {
@@ -67,10 +70,15 @@ struct InsertQuery {
     vector<string> values;
 };
 
+struct AddQuery{
+    string table;
+    vector<string> values;
+};
 
 struct CreateQuery{
     string table;
     string database;
+    vector<string> values;
 };
 
 struct UpdateQuery {
@@ -95,6 +103,7 @@ struct ASTNode {
     CreateQuery createQuery;
     OpenQuery openQuery;
     DropQuery dropQuery;
+    AddQuery addQuery;
 };
 
 
@@ -134,8 +143,6 @@ class DatabaseManager {
         return "";
     }
 
-    
-
 
 class Parser {
     vector<string> tokens;
@@ -153,7 +160,10 @@ public:
     }
 
     bool match(const string& expected) {
-        if (peek() == expected) {
+        string s = peek();
+        transform(s.begin(), s.end(), s.begin(),::toupper);
+
+        if (s == expected) {
             advance();
             return true;
         }
@@ -168,12 +178,17 @@ public:
         if (match("CREATE")) return parseCreate();
         if (match("OPEN")) return parseOpen();
         if (match("DROP")) return parseDrop();
+        if (match("ADD")) return parseAdd();
         return { UNKNOWN };
     }
 
 private:
     ASTNode parseSelect() {
         SelectQuery query;
+
+        if(peek().empty()){
+            return{UNKNOWN};
+        }
 
         if (peek() == "*") {
             query.all_operator = advance(); 
@@ -211,40 +226,161 @@ private:
                 query.sort_type = advance();
             }
         }
+        if (match(";")) {
+            // ok
+        } 
+        else if (!peek().empty()) {
+            cout << "Syntax Error: Unexpected token '" << peek() << "' after the statement" << endl;
+            return { UNKNOWN };
+        }
 
         return { SELECT, query };
     }
 
     ASTNode parseInsert() {
         InsertQuery query;
-        match("INTO"); // optional
-        query.table = advance();
-        match("VALUES");
-        match("(");
-        while (!match(")")) {
-            string val = advance();
-            if (val != ",") query.values.push_back(val);
+    
+        if (!match("INTO")) {
+            cout << "Expected 'INTO' after 'INSERT'" << endl;
+            return { UNKNOWN };
         }
+    
+        if (peek().empty()) {
+            cout << "Expected table name after 'INTO'" << endl;
+            return { UNKNOWN };
+        }
+    
+        query.table = advance();
+    
+        if (!match("VALUES")) {
+            cout << "Expected 'VALUES' after table name" << endl;
+            return { UNKNOWN };
+        }
+    
+        if(!match("(")){
+            cout << "Expected '(' after table name" << endl;
+            return { UNKNOWN };
+        }
+
+        vector<string> row;
+        int i=0;
+        // int n=tokens.size();
+        // if(tokens[n-1]==";"){
+        //     if(tokens[n-2]!=")"){
+        //         cout << "Expected ')' after table name" << endl;
+        //         return { UNKNOWN };
+        //     }
+        // }
+
+        while(i<tokens.size() && tokens[i]!="(")i++;
+        
+        i++;
+
+        while(i<tokens.size() ){
+
+            if(tokens[i]==")"){
+                break;
+            }
+
+            if(tokens[i]==",")i++;
+            else{
+            row.push_back(tokens[i]);
+            i++;
+            }
+        }
+        if(i==tokens.size()){
+            cout << "Expected ')' after table name" << endl;
+            return { UNKNOWN };
+        }
+
+        // if (match(";")) {
+        //     // ok
+        // } 
+        // else if (!peek().empty()) {
+        //     cout << "Syntax Error: Unexpected token '" << peek() << "' after the statement" << endl;
+        //     return { UNKNOWN };
+        // }     
+        
+        query.values=row;
+
         return { INSERT, {}, query };
     }
+    
 
     ASTNode parseDelete() {
-        
+        DeleteQuery query;
+
+        if(match("ROWS")){
+            if (!match("FROM")) {
+                cout << "Syntax Error: Expected 'FROM' "<< endl;
+                return { UNKNOWN };
+            }
+
+            query.table = advance();
+            
+            if(match("WHERE")){
+                query.where_col = advance();
+                query.where_operator = advance();
+                query.where_value = advance();
+            }
+        }
+
+        if (match("COLUMN")){
+            query.col = advance();
+
+            if (!match("FROM")) {
+                cout << "Syntax Error: Expected 'FROM' "<< endl;
+                return { UNKNOWN };
+            }
+
+            query.table = advance();
+        }
+
+        if (match(";")) {
+            // ok
+        } 
+        else if (!peek().empty()) {
+            cout << "Syntax Error: Unexpected token '" << peek() << "' after the statement" << endl;
+            return { UNKNOWN };
+        }
+
+        return {DELETE,{},{},query};
+
     }
 
+
+    // come here
     ASTNode parseUpdate() {
         UpdateQuery query;
-        match("FROM"); // optional
         query.table = advance();
-        match("SET");
+        if(!match("SET")){
+            cout << "Expected 'SET' ..." <<endl;
+            return{UNKNOWN};
+        }
+        else{
+            match("SET");
+        }
         query.set_column = advance();
-        match("="); // expected
+        if(!match("=")){
+            cout << "Expected '=' ..." <<endl;
+            return{UNKNOWN};
+        }
+        else{
+            match("=");
+        }
         query.set_value = advance();
 
         if (match("WHERE")) {
             query.where_column = advance();
             query.where_operator = advance();
             query.where_value = advance();
+        }
+        if (match(";")) {
+            // ok
+        } 
+        else if (!peek().empty()) {
+            cout << "Syntax Error: Unexpected token '" << peek() << "' after the statement" << endl;
+            return { UNKNOWN };
         }
         return { UPDATE, {}, {}, {}, query };
     }
@@ -254,10 +390,54 @@ private:
         if(match("TABLE")){
             query.table = advance();
 
+            if(!match("VALUES")){
+                cout << "Expected 'VALUES' ..." <<endl;
+                return{UNKNOWN};
+            }
+            else{
+                match("VALUES");
+            }
+
+            if(!match("(")){
+                cout << "Expected '(' ..." <<endl;
+                return{UNKNOWN};
+            }
+            else{
+                match("(");
+            }
+
+            vector<string> row;
+            int i=0;
+            while(i<tokens.size() && tokens[i]!="(")i++;
+            i++;
+            while(i<tokens.size() ){
+                if(tokens[i]==")"){
+                    current = i;
+                    advance();
+                    break;
+                }
+                if(tokens[i]==",")i++;
+                else{
+                row.push_back(tokens[i]);
+                i++;
+                }
+            }
+
+            query.values = row;
+
         }
         else if(match("DATABASE")){
             query.database = advance();
             
+        }
+        
+
+        if (match(";")) {
+            // ok
+        } 
+        else if (!peek().empty()) {
+            cout << "Syntax Error: Unexpected token after the statement" << endl;
+            return { UNKNOWN };
         }
 
         return {CREATE, {}, {}, {}, {}, query};
@@ -280,8 +460,80 @@ private:
             query.database = advance();
         }
 
+        if (match(";")) {
+            // ok
+        } 
+        else if (!peek().empty()) {
+            cout << "Syntax Error: Unexpected token '" << peek() << "' after the statement" << endl;
+            return { UNKNOWN };
+        }
         return {DROP,{},{},{},{},{},{},query};
 
+    }
+
+    ASTNode parseAdd(){
+        AddQuery query;
+        
+        if(!match("COLUMN")){
+            cout << "Expected 'COLUMN' ..." <<endl;
+            return{UNKNOWN};
+        }
+        else{
+            match("COLUMN");
+        }
+
+        if(!match("(")){
+            cout << "Expected '(' ..." <<endl;
+            return{UNKNOWN};
+        }
+        else{
+            match("(");
+        }
+        
+        vector<string> row;
+        int i=0;
+        while(i<tokens.size() && tokens[i]!="(")i++;
+        i++;
+        while(i<tokens.size() ){
+            if(tokens[i]==")"){
+                current = i;
+                advance();
+                break;
+            }
+            if(tokens[i]==",")i++;
+            else{
+            row.push_back(tokens[i]);
+            i++;
+            }
+        }
+
+        query.values = row;
+
+        if(!match("INTO")){
+            cout << "Expected 'INTO' ..." <<endl;
+            return{UNKNOWN};
+        }
+        else{
+            match("INTO");
+        }
+
+        if(peek().empty()){
+            cout << "Expected table name after 'INTO' ..." <<endl;
+            return{UNKNOWN};
+        }
+
+        query.table = advance();
+
+        if (match(";")) {
+            // ok
+        } 
+        else if (!peek().empty()) {
+            cout << "Syntax Error: Unexpected token '" << peek() << "' after the statement" << endl;
+            return { UNKNOWN };
+        }
+
+        return{ADD,{},{},{},{},{},{},{},query};
+        
     }
 
 };
@@ -304,6 +556,7 @@ public:
             case CREATE:  runCreate(ast.createQuery); break;
             case OPEN:    runOpen(ast.openQuery); break;
             case DROP:    runDrop(ast.dropQuery); break;
+            case ADD:     runAdd(ast.addQuery); break;
             default: cout << "Unknown query type\n";
         }
     }
@@ -316,6 +569,7 @@ private:
     void runCreate(const CreateQuery& q);
     void runOpen(const OpenQuery& q);
     void runDrop(const DropQuery& q);
+    void runAdd(const AddQuery& q);
 };
 
 void ExecutionEngine::runOpen(const OpenQuery& q){
@@ -356,9 +610,19 @@ void ExecutionEngine::runDrop(const DropQuery& q){
 
 void ExecutionEngine::runInsert(const InsertQuery& q) {
     tables t;
+    if (dbManager->getCurrentDatabase().empty()) {
+        cout << "Please open a database to insert into a table ..." << endl;
+        return;
+    }
+
     vector<vector<string>> data = t.read(dbManager->getCurrentDatabase(),q.table);
-    vector<string> columnHeaders = data[0];
-    // Add validation to ensure values match expected column count
+
+    if (data.empty()) {
+        cout << "Table is empty or does not exist ..." << endl;
+        return;
+    }
+
+    t.addrow(q.values,data,dbManager->getCurrentDatabase(),q.table);
     
 }
 
@@ -381,7 +645,8 @@ void ExecutionEngine::runSelect(const SelectQuery& q) {
     // CHECK WHERE
     if (!q.where_column.empty() && !q.where_operator.empty() && !q.where_value.empty()) {
         data = t.where(data, q.where_column, q.where_operator, q.where_value);
-        if (data.size() <= 1) { // only headers left
+        if (data.size() <= 1) { 
+            // nothing to show
             cout << "No rows match the WHERE condition ..." << endl;
             return;
         }
@@ -389,6 +654,7 @@ void ExecutionEngine::runSelect(const SelectQuery& q) {
 
     // CHECK SORT BY
     if (!q.sort_by.empty() && !q.sort_type.empty()) {
+        transform(q.sort_type.begin(), q.sort_type.end(), q.sort_type.begin(), ::toupper);
         if (q.sort_type == "ASC") {
             data = t.sort_asc(data, q.sort_by);
         } else if (q.sort_type == "DESC") {
@@ -412,7 +678,30 @@ void ExecutionEngine::runSelect(const SelectQuery& q) {
 
 
 void ExecutionEngine::runDelete(const DeleteQuery& q) {
-    return;
+    tables t;
+
+    if (dbManager->getCurrentDatabase().empty()) {
+        cout << "Please open a database to alter a table ..." << endl;
+        return;
+    }
+    
+    vector<vector<string>> data = t.read(dbManager->getCurrentDatabase(), q.table);
+
+    if (data.empty()) {
+        cout << "Table is empty or does not exist ..." << endl;
+        return;
+    }
+
+    if(!q.col.empty()){
+        t.deletecol(data,q.col,dbManager->getCurrentDatabase(),q.table);
+        
+    }
+
+    if(!q.where_col.empty() && !q.where_operator.empty() && !q.where_value.empty()){
+        t.deleterow(data,q.where_col,q.where_value,q.where_operator,dbManager->getCurrentDatabase(), q.table);
+        
+    }
+
 }
 
 void ExecutionEngine::runCreate(const CreateQuery& q) {
@@ -430,7 +719,6 @@ void ExecutionEngine::runCreate(const CreateQuery& q) {
             databases(q.database);
 
             if (filesystem::exists(path)) {
-                cout << "Created Database '" << q.database << "'." << endl;
                 add_database(fetch_structure(),q.database);
             } 
             else {
@@ -445,9 +733,10 @@ void ExecutionEngine::runCreate(const CreateQuery& q) {
         }
 
         else {
-
             tables t;
+            vector<vector<string>> data = t.read(dbManager->getCurrentDatabase(), q.table);
             t.create_table(dbManager->getCurrentDatabase(),q.table);
+            t.addrow(q.values,data,dbManager->getCurrentDatabase(),q.table);
             add_table(fetch_structure(),dbManager->getCurrentDatabase(),q.table);
             cout << q.table << " created successfully in database " << dbManager->getCurrentDatabase() << " ..." << endl;
         }
@@ -479,12 +768,29 @@ void ExecutionEngine::runUpdate(const UpdateQuery& q) {
         }
         
         t.update_table(dbManager->getCurrentDatabase(), q.table, q.set_column, q.set_value, q.where_column, q.where_value, q.where_operator);
-        cout << "Update successful on matching rows." << endl;
+        
     } 
 
     else {
         t.update_table(dbManager->getCurrentDatabase(), q.table, q.set_column, q.set_value, "", "", "");
-        cout << "Update successful on all rows (no WHERE condition)." << endl;
     }
     
+}
+
+void ExecutionEngine::runAdd(const AddQuery& q){
+    tables t;
+    if (dbManager->getCurrentDatabase().empty()) {
+        cout << "Please open a database to insert into a table ..." << endl;
+        return;
+    }
+
+    vector<vector<string>> data = t.read(dbManager->getCurrentDatabase(),q.table);
+
+    if (data.empty()) {
+        cout << "Table is empty or does not exist ..." << endl;
+        return;
+    }
+
+    t.addcol(data,q.values,dbManager->getCurrentDatabase(),q.table);
+
 }

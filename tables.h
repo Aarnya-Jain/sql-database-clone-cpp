@@ -43,15 +43,32 @@ private:
 public:
     
     vector<vector<string>> read(string owner_database,string table_name);
+
     void create_table(string owner_database,string table_name);
+
     void delete_table(string owner_database,string table_name);
+
     void addcol(vector<string> col);
-    vector<vector<string>> addrow(vector<string> row,vector<vector<string>> &data);
+
+    void addrow(vector<string> rows,vector<vector<string>> data,string owner_database,string table_name);
+
     vector<vector<string>> sort_asc(vector<vector<string>> data , string col);
+
     vector<vector<string>> sort_desc(vector<vector<string>> data , string col);
+
     vector<vector<string>> where(vector<vector<string>> &vec, string column, string op, string val );
+
     vector<vector<string>> select_by_col(vector<vector<string>> vec,unordered_set<string> col);
+
     void update_table(string owner_database,string table_name, string c1name,string c1value, string c2name,string c2value,string op);
+
+    vector<vector<string>> refine(vector<vector<string>> data);
+
+    void deletecol(vector<vector<string>> data,string colname,string owner_database,string table_name);
+
+    void deleterow(vector<vector<string>> data,string colname,string colval,string op,string owner_database,string table_name);
+
+    void addcol(vector<vector<string>> data,vector<string> newcol,string owner_database,string table_name);
     
 };
 
@@ -125,18 +142,181 @@ void displaytable(vector<vector<string>> data) {
     }
 }
 
-void tables::addcol(vector<string> col){
-        int index = data[0].size()-1;
-        for(int i=0;i<data.size();i++){
-            data[i].push_back(col[i]);
-        }
+
+vector<vector<string>> tables::refine(vector<vector<string>> data){
+    vector<vector<string>> refined_data;
+    int maxi = data[0].size();
+    // for(int i=0;i<data.size();i++){
+    //     if(data[i].size()>maxi){
+    //         maxi = data[i].size();
+    //     }
+    // }
+
+    int mini=data[data.size()-1].size();
+    for(int i=0;i<maxi-mini;i++){
+        data[data.size()-1].push_back("-");
+    }
+    
+    // for(int i=0;i<data.size();i++){
+    //     while(data[i].size() != maxi){
+    //         data[i].push_back("-");
+    //     }
+    // }
+
+    refined_data = data;
+    return refined_data;
 }
 
-vector<vector<string>> tables::addrow(vector<string> row,vector<vector<string>> &data){
-   
-    data.push_back(row);
-    return data;
+void tables::addcol(vector<vector<string>> data,vector<string> newcol,string owner_database,string table_name){
+    if(data.size()<newcol.size()){
+        cout << "Error : Too many arguements for column values ..."<<endl;
+        return;
+    }
+
+    else if(newcol.size()<data.size()){
+        int size = data.size() - newcol.size();
+        for(int i=0;i<size;i++){
+            newcol.push_back("-");
+        }
+    }
+
+    for(int i=0;i<data.size();i++){
+        data[i].push_back(newcol[i]);
+    }
+
+    write_table(data,owner_database,table_name);
+    cout << "Column inserted successfully ..." << endl;
+    return;
+}
+
+void tables::addrow(vector<string> rows,vector<vector<string>> data,string owner_database,string table_name){
+    if(data.empty()){
+        data.push_back(rows);
+        write_table(data,owner_database,table_name);
+        return;
+    }
+
+    int maxi = data[0].size();
+    for(int i=0;i<data.size();i++){
+        if(data[i].size()>maxi){
+            maxi = data[i].size();
+        }
+    }
+
+    if(rows.size()>maxi){
+        cout << "Values exceed the no. of columns ..." <<endl;
+        return;
+    }
     
+    data.push_back(rows);
+    
+    data = refine(data);
+    write_table(data,owner_database,table_name);
+    cout << "Row inserted successfully ..." << endl;
+    return;
+    
+}
+
+void tables::deletecol(vector<vector<string>> data,string colname,string owner_database,string table_name){
+    int idx=-1;
+    for(int i=0;i<data[0].size();i++){
+        if(data[0][i]==colname){
+            idx=i;break;
+        }
+    }
+
+    if(idx==-1){
+        cout << "Column not found ... "<<endl;
+        return;
+    }
+
+    for(int i=idx;i<data[0].size()-1;i++){
+        for(int j=0;j<data.size();j++){
+            data[j][idx]=data[j][idx+1];
+        }
+    }
+    for(int i=0;i<data.size();i++){
+        data[i].pop_back();
+    }
+
+    write_table(data,owner_database,table_name);
+    cout << "Column \""<<colname<<"\" deleted successfully ..." << endl;
+    return;
+    
+}
+
+void tables::deleterow(vector<vector<string>> data,string colname,string colval,string op,string owner_database,string table_name){
+    int idx=-1;
+    for(int i=0;i<data[0].size();i++){
+        if(data[0][i]==colname){
+            idx=i;break;
+        }
+    }
+    if(idx==-1)return;
+    if(op=="="){
+        for(int i=1;i<data.size();i++){
+            if(data[i][idx]==colval){
+                for(int j=i;j<data.size()-1;j++){
+                    data[j]=data[j+1];
+                }
+                data.pop_back();i--;
+            }
+        }
+    }
+    else if(op==">"){
+        for(int i=1;i<data.size();i++){
+            if(data[i][idx]>colval){
+                for(int j=i;j<data.size()-1;j++){
+                    data[j]=data[j+1];
+                }
+                data.pop_back();i--;
+            }
+        }
+    }
+    else if(op=="<"){
+        for(int i=1;i<data.size();i++){
+            if(data[i][idx]<colval){
+                for(int j=i;j<data.size()-1;j++){
+                    data[j]=data[j+1];
+                }
+                data.pop_back();i--;
+            }
+        }
+    }
+    else if(op==">="){
+        for(int i=1;i<data.size();i++){
+            if(data[i][idx]>=colval){
+                for(int j=i;j<data.size()-1;j++){
+                    data[j]=data[j+1];
+                }
+                data.pop_back();i--;
+            }
+        }
+    }
+    else if(op=="<="){
+        for(int i=1;i<data.size();i++){
+            if(data[i][idx]<=colval){
+                for(int j=i;j<data.size()-1;j++){
+                    data[j]=data[j+1];
+                }
+                data.pop_back();i--;
+            }
+        }
+    }
+    else if(op=="!="){
+        for(int i=1;i<data.size();i++){
+            if(data[i][idx]!=colval){
+                for(int j=i;j<data.size()-1;j++){
+                    data[j]=data[j+1];
+                }
+                data.pop_back();i--;
+            }
+        }
+    }
+
+    write_table(data,owner_database,table_name);
+    cout << "Row deleted successfully ..." << endl;
+    return;
 }
 
 vector<vector<string>> tables::sort_asc(vector<vector<string>> vec, string column){
@@ -312,6 +492,7 @@ void tables::update_table(string owner_database,string table_name, string c1name
     }
 
     write_table(vec,owner_database,table_name);
+    cout << "Update successful on matching rows." << endl;
     return;
 }
 

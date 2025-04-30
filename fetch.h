@@ -78,7 +78,7 @@ void save_structure(const map<string, vector<string>> tree) {
 }
 
 void add_database(map<string, vector<string>> tree,string db_name) {
-
+    transform(db_name.begin(), db_name.end(), db_name.begin(), ::toupper);
     if (tree.find(db_name) != tree.end()) {
         cout << "Database already exists.\n";
         return;
@@ -86,21 +86,23 @@ void add_database(map<string, vector<string>> tree,string db_name) {
 
     tree[db_name] = {}; 
     save_structure(tree);
+    cout << "Created Database '" << db_name << "'..."<<endl;
 }
 
 void add_table(map<string, vector<string>> tree,string db_name,string table_name) {
-
-    if (tree.find(db_name) == tree.end()) {
-        cout << "Database not found.\n";
-        return;
-    }
-
+    transform(db_name.begin(), db_name.end(), db_name.begin(), ::toupper);
+    transform(table_name.begin(), table_name.end(), table_name.begin(), ::toupper);
+    
     tree[db_name].push_back(table_name);
+
     save_structure(tree);
+    cout << "Created table '" << table_name << "'..." << endl;
 
 }
 
 void remove_database(map<string, vector<string>> tree, string db_name) {
+    transform(db_name.begin(), db_name.end(), db_name.begin(), ::toupper);
+    
     if (tree.find(db_name) == tree.end()) {
         return;
     }
@@ -110,10 +112,9 @@ void remove_database(map<string, vector<string>> tree, string db_name) {
 }
 
 void remove_table(map<string, vector<string>> tree, string db_name, string table_name) {
-    if (tree.find(db_name) == tree.end()) {
-        return;
-    }
-
+    transform(table_name.begin(), table_name.end(), table_name.begin(), ::toupper);
+    transform(db_name.begin(), db_name.end(), db_name.begin(), ::toupper);
+    
     vector<string> &tables = tree[db_name];
     auto it = find(tables.begin(), tables.end(), table_name);
     if (it != tables.end()) {
