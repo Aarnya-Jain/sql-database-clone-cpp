@@ -1,50 +1,56 @@
-🗃️ CodexDB
-CodexDB is a lightweight, custom-built database management system developed in C++. It features a fully custom lexer, parser, execution engine, and support for persistent storage and basic SQL-like queries.
+# 🗃️ CodexDB
 
-🚀 Features
-⚙️ Finite State Machine (FSM) Tokenizer
-Implements a custom lexer using a Finite State Machine for reliable and flexible tokenization of SQL-like commands.
+**CodexDB** is a lightweight, custom-built **database management system** developed in **C++**. It features a handcrafted lexer, parser, execution engine, and supports persistent storage with essential SQL-like query handling.
 
-🌲 AST-Based Parser
-Parses queries into an Abstract Syntax Tree (AST), enabling structured interpretation and future extensibility.
+---
 
-📦 Execution Engine
+## 🚀 Features
+
+### ⚙️ FSM-Based Tokenizer
+Built using a **Finite State Machine (FSM)** to tokenize SQL-like commands with flexibility and precision.
+
+### 🌳 AST-Based Parser
+Parses queries into an **Abstract Syntax Tree (AST)** for clean interpretation and future scalability.
+
+### ⚙️ Execution Engine
 Supports essential SQL operations:
+- `CREATE TABLE`
+- `DROP TABLE`
+- Column definitions (with type awareness)
+- `INSERT INTO`
+- `SELECT` with `WHERE` clause evaluation
 
-CREATE TABLE
+### 💾 Persistent Storage
+- Automatically **saves** databases and tables to disk
+- **Loads** them back on startup seamlessly
 
-DROP TABLE
+### 🧠 WHERE Clause Expression Evaluation
+Evaluates basic expressions and comparisons in the `WHERE` clause for `SELECT` queries.
 
-Column definitions (with type awareness)
+---
 
-INSERT INTO
+## 🛠️ Tech Stack
 
-SELECT with WHERE expression evaluation
+- **Language**: C++ (C++17 or higher)
+- **Core Concepts**:
+  - Finite State Machine (FSM)
+  - AST Construction & Traversal
+  - File I/O for Persistence
+  - String Manipulation & Parsing
 
-💾 Persistent Storage
+---
 
-Saves databases and tables to files
+## 🤝 Contributing
 
-Automatically loads them on startup
+CodexDB is open to ideas, improvements, and contributions!  
+Feel free to **fork** this repository and open a **pull request** with your enhancements.
 
-🧠 Expression Evaluation in WHERE Clause
-Full support for basic expressions and comparisons in the WHERE clause during SELECT.
+---
 
-🛠️ Tech Stack
-Language: C++
+## 📦 Requirements
 
-Core Concepts Used:
+- A C++17-compliant compiler (e.g., `g++ 9+`, `clang++ 10+`)
 
-Finite State Machine (FSM)
+---
 
-AST construction and traversal
-
-File I/O for persistence
-
-String manipulation and parsing
-
-
-🤝 Contributing
-Open to contributions and suggestions! Feel free to fork and open a pull request.
-
-Requirements : C++ 17 or higher
+> **CodexDB** is built to demonstrate how a complete, working DBMS can be created from scratch using modern C++ features and fundamental compiler design principles.
