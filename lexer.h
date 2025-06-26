@@ -117,6 +117,14 @@ public:
                         token = "";
                         current = START;
                     }
+                    else if(token == "<" && c == '=') {
+                        token += c;
+                        if (!token.empty()) {
+                            tokens_vector.push_back(token);
+                        }
+                        token = "";
+                        current = START;
+                    }
                     else {
                         if (!token.empty()) {
                             tokens_vector.push_back(token);
